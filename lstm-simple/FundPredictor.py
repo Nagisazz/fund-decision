@@ -12,7 +12,7 @@ from keras.models import load_model
 
 
 folderCode = './lstm-simple/data/'
-modelPath = './lstm-simple/model/modelrmse.hdf5'
+modelPath = './lstm-simple/model/{}/modelrmse.hdf5'
 
 plt.rcParams['font.sans-serif'] = 'SimHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -20,7 +20,7 @@ plt.rcParams['axes.unicode_minus'] = False
 batch_size = 4
 epochs = 100
 
-time_step = 6  # 用多少组天数进行预测
+time_step = 12  # 用多少组天数进行预测
 input_size = 6  # 每组天数，亦即预测天数
 look_back = time_step * input_size
 showdays = 120  # 最后画图观察的天数（测试天数）
@@ -60,6 +60,7 @@ class FundPredictor:
 
             # model.compile(loss='mean_squared_error', optimizer='adam')
             model.compile(loss='mae', optimizer='adam')
+
             return model
         else:
             # 加载模型
@@ -288,7 +289,7 @@ class FundPredictor:
         
         if type == 1 and rmse < rmseDec:
             # 保存模型
-            modelPathNew = modelPath.replace('rmse',str(rmse))
+            modelPathNew = modelPath.format(self.plateCode)
             print('save_model,modelPath:{}'.format(modelPathNew))
             model.save(modelPathNew)
         return rmse
