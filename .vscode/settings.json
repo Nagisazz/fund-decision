@@ -1,4 +1,5 @@
 {
     "commentTranslate.source": "Bing",
     "jupyter.notebookFileRoot": "${workspaceFolder}",
+    "commentTranslate.hover.enabled": false,
 }
