@@ -404,14 +404,117 @@ class FundDecision:
 
         return res, all
 
-    def stratege3(self, mean, wave, lastPrice):
+    def stratege3(self, mean, wave, lastPrice, lastYield, totalYield):
+        '''
+        定投策略
+        :param mean: 均线
+        :param wave: 振幅
+        :param lastPrice: 前1日收盘价
+        :param lastYield: 上次定投日收益率
+        :param totalYield: 总收益率
+        '''
+        all = False
+        bal = 0.4
+        cal = lastPrice/mean-1  # 大于0,则高于均线
+
+        # 均线、振幅策略
+        if (wave > 0.05):
+            if (cal >= 0 and cal < 0.1):
+                res = 0.5
+            elif (cal >= 0.1 and cal < 0.2):
+                res = 0
+            elif (cal >= 0.2 and cal < 0.3):
+                res = -1
+            elif (cal >= 0.3 and cal < 0.5):
+                res = -3
+            elif (cal >= 0.5 and cal < 1):
+                res = -5
+            elif (cal >= 1):
+                res = -10
+
+            elif (cal >= -0.05 and cal < 0):
+                res = 0.6
+            elif (cal >= -0.1 and cal < -0.05):
+                res = 0.9
+            elif (cal >= -0.2 and cal < -0.1):
+                res = 1.2
+            elif (cal >= -0.3 and cal < -0.2):
+                res = 1.5
+            elif (cal >= -0.4 and cal < -0.3):
+                res = 1.8
+            elif (cal < -0.4):
+                res = 2.1
+        else:
+            if (cal >= 0 and cal < 0.1):
+                res = 0.8
+            elif (cal >= 0.1 and cal < 0.2):
+                res = 0.5
+            elif (cal >= 0.2 and cal < 0.3):
+                res = 0
+            elif (cal >= 0.3 and cal < 0.5):
+                res = -1
+            elif (cal >= 0.5 and cal < 1):
+                res = -3
+            elif (cal >= 1):
+                res = -5
+
+            elif (cal >= -0.05 and cal < 0):
+                res = 0.8 + bal
+            elif (cal >= -0.1 and cal < -0.05):
+                res = 1.0 + bal
+            elif (cal >= -0.2 and cal < -0.1):
+                res = 1.2 + bal
+            elif (cal >= -0.3 and cal < -0.2):
+                res = 1.4 + bal
+            elif (cal >= -0.4 and cal < -0.3):
+                res = 1.6 + bal
+            elif (cal < -0.4):
+                res = 1.8 + bal
+
+        # 上次定投日与这次收益率相差策略
+        # 比上次跌的多多买点，涨的多多卖点，做T
+        diffYield = totalYield - lastYield
+        if res > 0:
+            if (diffYield >= -0.05 and diffYield <= 0.05):
+                res = res
+            elif (diffYield > 0.05 and diffYield < 0.1):
+                res = (-res - 0.2) * 0.5
+            elif (diffYield >= 0.1 and diffYield < 0.15):
+                res = (-res - 0.2) * 1
+            elif (diffYield >= 0.15 and diffYield < 0.2):
+                res = (-res - 0.2) * 2
+            elif (diffYield >= 0.2):
+                res = (-res - 0.2) * 3
+            elif (diffYield >= -0.1 and diffYield < -0.05):
+                res = res + 0.2
+            elif (diffYield >= -0.15 and diffYield < -0.1):
+                res = res + 0.5
+            elif (diffYield >= -0.2 and diffYield < -0.15):
+                res = res + 1.0
+            elif (diffYield < -0.2):
+                res = res + 1.5
+
+        # 总收益率策略
+        if (totalYield >= 0.05 and totalYield < 0.5):
+            res = 2 * totalYield - (res / 30)
+            all = True
+        elif (totalYield >= -0.2 and totalYield < -0.15):
+            res = res + 0.5
+        elif (totalYield >= -0.3 and totalYield < -0.2):
+            res = res + 1
+        elif (totalYield < -0.3):
+            res = res + 2
+
+        return res, all
+
+
+    def stratege4(self, mean, wave, lastPrice):
         '''
         定投策略
         :param mean:均线
         :param wave:振幅
         :param lastPrice:前1日收盘价
         '''
-        bal = 0.3
         cal = lastPrice/mean-1  # 大于0,则高于均线
         if (cal >= 0 and cal < 0.15):
             return 0.9
