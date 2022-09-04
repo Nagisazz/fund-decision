@@ -25,13 +25,18 @@ for code in ['161725']:
         invest_money = total / (realDays / frequence) * 2  # 每次定投金额
         print("{}开始计算，定投频率：{}日，每次定投：{}，定投开始时间：{}，定投结束时间：{}".format(code, frequence, invest_money, start_time, end_time))
 
-        res, buy, money = fundDecision.smart_invest(fundData, df, frequence, invest_money, start_time, end_time, days, wave, 1, 3000)
+        # res, buy, money = fundDecision.smart_invest(fundData, df, frequence, invest_money, start_time, end_time, days, wave, 1, 3000)
         # print(money)
         # fundDecision.myplot(df, res, buy, "定投频率：{}日，每次定投：{}，收益率：".format(frequence, invest_money))
 
-        res, buy, money = fundDecision.smart_invest(fundData, df, frequence, invest_money, start_time, end_time, days, wave, 2, 3000)
+        # res, buy, money = fundDecision.smart_invest(fundData, df, frequence, invest_money, start_time, end_time, days, wave, 2, 3000)
         # print(money)
         # fundDecision.myplot(df, res, buy, "定投频率：{}日，每次定投：{}，收益率：".format(frequence, invest_money))
 
-        res, buy, money = fundDecision.smart_invest(fundData, df, frequence, invest_money, start_time, end_time, days, wave, 3, 3000)
+        # res, buy, money = fundDecision.smart_invest(fundData, df, frequence, invest_money, start_time, end_time, days, wave, 3, 3000)
         # fundDecision.myplot(df, res, buy, "定投频率：{}日，每次定投：{}，收益率：".format(frequence,invest_money))
+
+        fundDecision.calculate_invest(fundData, '20190821', 7, invest_money, 7813, 0.9738, 0.053, days, wave, 1)
+
+        fundDecision.calculate_invest(fundData, '20190828', 7, invest_money, 12492, 0.9915, 0.055, days, wave, 1)
+

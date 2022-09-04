@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
-
+import math
 
 class FundDecision:
 
@@ -96,45 +96,49 @@ class FundDecision:
             # 判断是否为定投日
             if date == invest_day:
                 if (invest_day == startTime):
-                    lastPrice = startTime
+                    last_price = startTime
                 else:
                     formal_day = 1
                     while (True):
-                        lastPrice = date - \
-                            np.timedelta64(formal_day, "D")  # 前1天的收盘价
-                        if (lastPrice in df.index.tolist()):
+                        last_price = date - np.timedelta64(formal_day, "D")  # 前1天的收盘价
+                        if (last_price in df.index.tolist()):
                             break
                         else:
                             formal_day += 1
-                    lastPrice = df[df.index == lastPrice]["收盘价"][0]
+                    mean = df[df.index == last_price]["均线"][0]
+                    wave = df[df.index == last_price]["振幅"][0]
+                    last_price = df[df.index == last_price]["收盘价"][0]
 
                     all = False
                     if type == 1:
                         rate = self.stratege1(
-                            mean, wave, lastPrice, last_yield, profile/buy_amount)
+                            mean, wave, last_price, last_yield, profile/buy_amount)
                     elif type == 2:
                         rate, all = self.stratege2(
-                            mean, wave, lastPrice, last_yield, profile/buy_amount)
+                            mean, wave, last_price, last_yield, profile/buy_amount)
                     elif type == 3:
-                        rate = self.stratege3(mean, wave, lastPrice) - 1.1
+                        rate = self.stratege3(mean, wave, last_price) - 1.1
 
-                    last_yield = profile/buy_amount
                     if all:
                         rate = rate if rate < 1 else 1
                         # 按照余额止盈
-                        sale_amount += balance*rate
-                        invest_amount -= balance*rate
+                        price = math.floor(balance*rate/10) * 10
+                        sale_amount += price
+                        invest_amount -= price
                     else:
                         if balance + investMoney*rate < 0:
                             rate = 0
+                        price = math.floor(investMoney*rate/10) * 10
                         # 按照定投基准金额定投
                         if rate < 0:
-                            sale_amount += -investMoney*rate
+                            sale_amount += -price
                         else:
-                            buy_amount += investMoney*rate
-                        invest_amount += investMoney*rate
+                            buy_amount += price
+                        invest_amount += price
                     invest_log[invest_day] = index  # 记录定投当日的指数
                     invest_rate_log[invest_day] = rate  # 记录定投当日的投资比率
+
+                    last_yield = (profile + quote_change*balance)/buy_amount # 记录定投当日的收益率
 
                 # 判断7天后是否为交易日,如果不是则往后加1天直到找到交易日
                 invest_day += np.timedelta64(frequence, 'D')
@@ -175,6 +179,82 @@ class FundDecision:
         over = over.set_index("日期")
         return over, invest_log, invest_rate_log
 
+    def calculate_invest(self, fund_data, date, frequence, invest_money, current_money, current_worth, current_yield, mean_days, wave_days, type):
+        '''
+        定投日单独计算
+        :param fund_data: 所有数据集
+        :param date: 定投日
+        :param frequence: 定投频率
+        :param invest_money: 每次定投金额
+        :param current_money: 当前资产
+        :param current_worth: 当前净值
+        :param current_yield: 当前收益率
+        :param mean_days: 参考均线天数
+        :param wave_days: 参考振幅天数
+        :param type: 策略类型
+
+        :return over: 资金变化图表数据
+        :return invest_log: 定投图表打点数据
+        :return invest_rate_log: 定投比率日志
+        '''
+        # 计算前一个交易日
+        formal_day = 1
+        while (True):
+            last_date = pd.to_datetime(date) - np.timedelta64(formal_day, "D")
+            if (last_date in fund_data.index.tolist()):
+                break
+            else:
+                formal_day += 1
+
+        # 封装数据集
+        start = fund_data.head(1).index
+        start = start.astype('str')[0].replace("-", "")  # 转换为字符串
+        df = fund_data.drop(fund_data[fund_data.index > start].index, axis=0, inplace=False)
+        df = df.reset_index()
+        df['日期'][0] = last_date
+        df=df.set_index('日期')
+        df=df.sort_index()
+
+        # 获取均线和振幅数据
+        res = self.mean_days(fund_data, df, mean_days, wave_days, pd.to_datetime(last_date))
+        df["均线"] = res[0]
+        df["振幅"] = res[1]
+        mean = df["均线"][0]
+        wave = df["振幅"][0]
+
+        # 计算定投频率前一个周期的收益率
+        while (True):
+            last_start = pd.to_datetime(date) - np.timedelta64(frequence, "D")
+            if (last_start in fund_data.index.tolist()):
+                break
+            else:
+                frequence += 1
+        last_df = self.getData(fund_data, last_start, pd.to_datetime(date))
+        last_worth = last_df['收盘价'][0]
+        last_yield = last_worth/current_worth * (1 + current_yield) - 1
+
+        # 计算定投比率
+        all = False
+        if type == 1:
+            rate = self.stratege1(
+                mean, wave, current_worth, last_yield, current_yield)
+        elif type == 2:
+            rate, all = self.stratege2(
+                mean, wave, current_worth, last_yield, current_yield)
+        elif type == 3:
+            rate = self.stratege3(mean, wave, current_worth) - 1.1
+
+        if all:
+            rate = rate if rate < 1 else 1
+            # 按照余额止盈
+            price = math.floor(current_money*rate/10) * 10
+        else:
+            if current_money + invest_money*rate < 0:
+                rate = 0
+            price = math.floor(invest_money*rate/10) * 10
+        
+        return all, rate, price, mean, wave, last_yield
+        
     def myplot(self, df1, res, buy, titlename):
         '''
         绘制定投结果图
@@ -404,111 +484,7 @@ class FundDecision:
 
         return res, all
 
-    def stratege3(self, mean, wave, lastPrice, lastYield, totalYield):
-        '''
-        定投策略
-        :param mean: 均线
-        :param wave: 振幅
-        :param lastPrice: 前1日收盘价
-        :param lastYield: 上次定投日收益率
-        :param totalYield: 总收益率
-        '''
-        all = False
-        bal = 0.4
-        cal = lastPrice/mean-1  # 大于0,则高于均线
-
-        # 均线、振幅策略
-        if (wave > 0.05):
-            if (cal >= 0 and cal < 0.1):
-                res = 0.5
-            elif (cal >= 0.1 and cal < 0.2):
-                res = 0
-            elif (cal >= 0.2 and cal < 0.3):
-                res = -1
-            elif (cal >= 0.3 and cal < 0.5):
-                res = -3
-            elif (cal >= 0.5 and cal < 1):
-                res = -5
-            elif (cal >= 1):
-                res = -10
-
-            elif (cal >= -0.05 and cal < 0):
-                res = 0.6
-            elif (cal >= -0.1 and cal < -0.05):
-                res = 0.9
-            elif (cal >= -0.2 and cal < -0.1):
-                res = 1.2
-            elif (cal >= -0.3 and cal < -0.2):
-                res = 1.5
-            elif (cal >= -0.4 and cal < -0.3):
-                res = 1.8
-            elif (cal < -0.4):
-                res = 2.1
-        else:
-            if (cal >= 0 and cal < 0.1):
-                res = 0.8
-            elif (cal >= 0.1 and cal < 0.2):
-                res = 0.5
-            elif (cal >= 0.2 and cal < 0.3):
-                res = 0
-            elif (cal >= 0.3 and cal < 0.5):
-                res = -1
-            elif (cal >= 0.5 and cal < 1):
-                res = -3
-            elif (cal >= 1):
-                res = -5
-
-            elif (cal >= -0.05 and cal < 0):
-                res = 0.8 + bal
-            elif (cal >= -0.1 and cal < -0.05):
-                res = 1.0 + bal
-            elif (cal >= -0.2 and cal < -0.1):
-                res = 1.2 + bal
-            elif (cal >= -0.3 and cal < -0.2):
-                res = 1.4 + bal
-            elif (cal >= -0.4 and cal < -0.3):
-                res = 1.6 + bal
-            elif (cal < -0.4):
-                res = 1.8 + bal
-
-        # 上次定投日与这次收益率相差策略
-        # 比上次跌的多多买点，涨的多多卖点，做T
-        diffYield = totalYield - lastYield
-        if res > 0:
-            if (diffYield >= -0.05 and diffYield <= 0.05):
-                res = res
-            elif (diffYield > 0.05 and diffYield < 0.1):
-                res = (-res - 0.2) * 0.5
-            elif (diffYield >= 0.1 and diffYield < 0.15):
-                res = (-res - 0.2) * 1
-            elif (diffYield >= 0.15 and diffYield < 0.2):
-                res = (-res - 0.2) * 2
-            elif (diffYield >= 0.2):
-                res = (-res - 0.2) * 3
-            elif (diffYield >= -0.1 and diffYield < -0.05):
-                res = res + 0.2
-            elif (diffYield >= -0.15 and diffYield < -0.1):
-                res = res + 0.5
-            elif (diffYield >= -0.2 and diffYield < -0.15):
-                res = res + 1.0
-            elif (diffYield < -0.2):
-                res = res + 1.5
-
-        # 总收益率策略
-        if (totalYield >= 0.05 and totalYield < 0.5):
-            res = 2 * totalYield - (res / 30)
-            all = True
-        elif (totalYield >= -0.2 and totalYield < -0.15):
-            res = res + 0.5
-        elif (totalYield >= -0.3 and totalYield < -0.2):
-            res = res + 1
-        elif (totalYield < -0.3):
-            res = res + 2
-
-        return res, all
-
-
-    def stratege4(self, mean, wave, lastPrice):
+    def stratege3(self, mean, wave, lastPrice):
         '''
         定投策略
         :param mean:均线
