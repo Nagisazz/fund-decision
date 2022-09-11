@@ -473,7 +473,7 @@ class FundDecision:
 
         # 总收益率策略
         if (totalYield >= 0.05 and totalYield < 0.5):
-            if(totalYield < 0.1 and res >= 1):
+            if(totalYield < 0.1 and res >= 0.5):
                 res = 0
             else:
                 res = res if res > 0 or res < -1 else 0
