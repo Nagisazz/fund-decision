@@ -2,6 +2,7 @@ import requests
 import time
 import execjs
 import pandas as pd
+import re
 
 folderCode = './investment-plan/data/'
 
@@ -10,6 +11,11 @@ class FundDataCrawler:
         head = 'http://fund.eastmoney.com/pingzhongdata/'
         tail = '.js?v=' + time.strftime("%Y%m%d%H%M%S", time.localtime())
         return head+fundCode+tail
+
+    def getTodayFund(self, fundCode):
+        content = requests.get("https://fundgz.1234567.com.cn/js/" + fundCode + ".js?rt=" + str(int(time.time())))
+        today_worth = re.findall('"gsz":"(.+?)","gszzl"', content.text)[0]
+        return today_worth
 
     def getFund(self, fundCode):
         content = requests.get(self.getUrl(fundCode))

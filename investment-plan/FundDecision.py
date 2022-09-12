@@ -193,9 +193,12 @@ class FundDecision:
         :param wave_days: 参考振幅天数
         :param type: 策略类型
 
-        :return over: 资金变化图表数据
-        :return invest_log: 定投图表打点数据
-        :return invest_rate_log: 定投比率日志
+        :return all: 是否按全部资产卖出
+        :return rate: 定投操作比率
+        :return price: 定投金额
+        :return mean: 均线净值
+        :return wave: 振幅
+        :return last_yield: 上次定投日收益率
         '''
         # 计算前一个交易日
         formal_day = 1
@@ -247,13 +250,30 @@ class FundDecision:
         if all:
             rate = rate if rate < 1 else 1
             # 按照余额止盈
-            price = math.floor(current_money*rate/10) * 10
+            price = -math.floor(current_money*rate/10) * 10
         else:
             if current_money + invest_money*rate < 0:
                 rate = 0
             price = math.floor(invest_money*rate/10) * 10
         
         return all, rate, price, mean, wave, last_yield
+
+    def calculate_price(self, fund_data, current_money, date):
+        '''
+        单独计算给定日期收益
+        :param fund_data: 所有数据集
+        :param current_money: 当前资产
+        :param date: 日期
+
+        :return current_money: 现有资产
+        :return income: 收益
+        '''
+        df = self.getData(fund_data, date, date)
+        income = 0
+        if df['涨跌幅'].size != 0:
+            income = current_money * df['涨跌幅'][0]
+            current_money += income
+        return current_money, income
         
     def myplot(self, df1, res, buy, titlename):
         '''
